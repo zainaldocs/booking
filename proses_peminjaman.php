@@ -1,9 +1,14 @@
 <?php
+session_start();
 require_once 'config/database.php';
 require_once 'config/functions.php';
 require_once 'config/mailer.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        header("Location: form_booking.php?msg=error");
+        exit;
+    }
     $nama = $_POST['nama_peminjam'];
     $email = $_POST['email_peminjam'];
     $departemen_id = $_POST['departemen_id'];
@@ -65,7 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $tpl_pending = get_setting($pdo, 'tpl_email_pending') ?: "Halo <b>[nama]</b>,\n\nKami telah menerima request peminjaman ruangan Anda. Saat ini statusnya adalah <b>Pending</b>.\n\nKode Booking: <b>[kode_booking]</b>\nRuangan: [ruangan]\nTanggal: [tanggal]\nWaktu: [waktu]\n\nUntuk melihat status atau membatalkan peminjaman, silakan klik tautan berikut:\n<a href='[cancel_link]'>[cancel_link]</a>\n\nKami akan menginformasikan kembali melalui email setelah admin memproses request Anda. Terima kasih.";
         
         $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-        $cancel_link = $protocol . "://" . $_SERVER['HTTP_HOST'] . "/booking/cancel.php?token=" . $cancel_token;
+        $base_dir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+        $cancel_link = $protocol . "://" . $_SERVER['HTTP_HOST'] . $base_dir . "/cancel.php?token=" . $cancel_token;
         
         $body_user = str_replace(['[nama]', '[kode_booking]', '[ruangan]', '[tanggal]', '[waktu]', '[departemen]', '[keterangan]', '[cancel_link]'], [$nama, $kode_booking, $ruangan_name, $tanggal, $waktu, $departemen_name, $keterangan_safe, $cancel_link], nl2br($tpl_pending));
         $subject_user = "Menunggu Persetujuan: Request Peminjaman Ruangan";

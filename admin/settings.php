@@ -8,6 +8,10 @@ require_once '../config/functions.php';
 
 // Proses Update Pengaturan atau Test Mail
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        die("Token keamanan tidak valid. Silakan kembali dan muat ulang halaman.");
+    }
+
     if (isset($_POST['action']) && $_POST['action'] == 'test_mail') {
         $admin_email = get_setting($pdo, 'admin_email');
         $subject = "Test Koneksi SMTP Sistem Booking";
@@ -77,6 +81,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <form method="POST" class="space-y-6">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                     <div class="border-b border-gray-100 pb-4 mb-4">
                         <h3 class="text-lg font-semibold text-gray-800 mb-1">Email Penerima Notifikasi</h3>
                         <p class="text-sm text-gray-500">Email ini akan menerima pemberitahuan setiap ada request booking baru dari user. Anda dapat memasukkan lebih dari satu email, pisahkan dengan koma (<code>,</code>) atau titik koma (<code>;</code>).</p>
@@ -124,7 +129,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     <div class="border-b border-gray-100 pb-4 mb-4 mt-12">
                         <h3 class="text-lg font-semibold text-gray-800 mb-1">Kustomisasi Pesan Email</h3>
                         <p class="text-sm text-gray-500">Anda dapat menggunakan variabel otomatis berikut (termasuk kurung sikunya): <br>
-                        <code>[nama]</code>, <code>[departemen]</code>, <code>[ruangan]</code>, <code>[tanggal]</code>, <code>[waktu]</code>, <code>[keterangan]</code>, <code>[alasan]</code> (khusus penolakan), <code>[kode_booking]</code> (kode pelacakan), <code>[cancel_link]</code> (tautan pembatalan).</p>
+                        <code>[nama]</code>, <code>[departemen]</code>, <code>[ruangan]</code>, <code>[tanggal]</code>, <code>[waktu]</code>, <code>[keterangan]</code>, <code>[alasan]</code> (khusus penolakan), <code>[kode_booking]</code> (kode pelacakan), <code>[cancel_link]</code> (tautan pembatalan), <code>[petugas]</code> (khusus disetujui).</p>
                     </div>
 
                     <div class="space-y-6">

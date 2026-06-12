@@ -6,7 +6,11 @@ require_once '../config/functions.php';
 require_once '../config/mailer.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $peminjaman_id = $_POST['peminjaman_id'];
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        die("Token keamanan tidak valid. Silakan kembali dan muat ulang halaman.");
+    }
+    
+    $peminjaman_id = (int) $_POST['peminjaman_id'];
     $action = $_POST['action'];
     $alasan_ditolak = $_POST['alasan_ditolak'] ?? '';
     $fasilitas_dialokasikan = $_POST['fasilitas_dialokasikan'] ?? [];
@@ -43,7 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $tanggal_fmt = date('d F Y', strtotime($req['tanggal']));
         
         $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-        $cancel_link = $protocol . "://" . $_SERVER['HTTP_HOST'] . "/booking/cancel.php?token=" . $req['cancel_token'];
+        $base_dir = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
+        $cancel_link = $protocol . "://" . $_SERVER['HTTP_HOST'] . $base_dir . "/cancel.php?token=" . $req['cancel_token'];
         
         $tpl_reject = get_setting($pdo, 'tpl_email_reject') ?: "Halo <b>[nama]</b>,\n\nMohon maaf, request peminjaman ruangan <b>[ruangan]</b> pada tanggal [tanggal] (Jam [waktu]) telah <b>Ditolak</b>.\n\nAlasan Penolakan:\n<i>[alasan]</i>";
         $body = str_replace(
@@ -101,16 +106,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             $pdo->commit();
 
+            $nama_petugas = "-";
+            if ($petugas_id) {
+                $stmt_ptg = $pdo->prepare("SELECT username FROM users_admin WHERE id = ?");
+                $stmt_ptg->execute([$petugas_id]);
+                if ($ptg = $stmt_ptg->fetch(PDO::FETCH_ASSOC)) {
+                    $nama_petugas = $ptg['username'];
+                }
+            }
+
             $waktu = $req['jam_mulai'] . ' - ' . $req['jam_selesai'];
             $tanggal_fmt = date('d F Y', strtotime($req['tanggal']));
             
             $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-            $cancel_link = $protocol . "://" . $_SERVER['HTTP_HOST'] . "/booking/cancel.php?token=" . $req['cancel_token'];
+            $base_dir = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
+            $cancel_link = $protocol . "://" . $_SERVER['HTTP_HOST'] . $base_dir . "/cancel.php?token=" . $req['cancel_token'];
             
-            $tpl_approve = get_setting($pdo, 'tpl_email_approve') ?: "Halo <b>[nama]</b>,\n\nSelamat! Request peminjaman ruangan <b>[ruangan]</b> pada tanggal [tanggal] (Jam [waktu]) telah <b>Disetujui</b>.\n\nFasilitas akan disiapkan sesuai ketersediaan. Terima kasih.";
+            $tpl_approve = get_setting($pdo, 'tpl_email_approve') ?: "Halo <b>[nama]</b>,\n\nSelamat! Request peminjaman ruangan <b>[ruangan]</b> pada tanggal [tanggal] (Jam [waktu]) telah <b>Disetujui</b>.\nPetugas: [petugas]\n\nFasilitas akan disiapkan sesuai ketersediaan. Terima kasih.";
             $body = str_replace(
-                ['[nama]', '[kode_booking]', '[ruangan]', '[tanggal]', '[waktu]', '[departemen]', '[keterangan]', '[cancel_link]'], 
-                [$req['nama_peminjam'], $req['kode_booking'], $req['nama_ruangan'], $tanggal_fmt, $waktu, $req['nama_departemen'], nl2br(htmlspecialchars($req['keterangan'])), $cancel_link], 
+                ['[nama]', '[kode_booking]', '[ruangan]', '[tanggal]', '[waktu]', '[departemen]', '[keterangan]', '[cancel_link]', '[petugas]'], 
+                [$req['nama_peminjam'], $req['kode_booking'], $req['nama_ruangan'], $tanggal_fmt, $waktu, $req['nama_departemen'], nl2br(htmlspecialchars($req['keterangan'])), $cancel_link, htmlspecialchars($nama_petugas)], 
                 nl2br($tpl_approve)
             );
             $subject = "Request Peminjaman Ruangan Disetujui";

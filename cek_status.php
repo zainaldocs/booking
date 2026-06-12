@@ -1,11 +1,16 @@
 <?php
+session_start();
 require_once 'config/database.php';
+require_once 'config/functions.php';
 
 $peminjaman = null;
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'check') {
-    $email = trim($_POST['email']);
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = "Token keamanan tidak valid. Silakan muat ulang halaman.";
+    } else {
+        $email = trim($_POST['email']);
     $kode = trim($_POST['kode_booking']);
     
     $stmt = $pdo->prepare("
@@ -20,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     
     if (!$peminjaman) {
         $error = "Data peminjaman tidak ditemukan. Pastikan Alamat Email dan Kode Booking benar.";
+    }
     }
 }
 ?>
@@ -42,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 
         <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-100">
             <form method="POST" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                 <input type="hidden" name="action" value="check">
                 <?php if($error): ?>
                     <div class="bg-red-50 text-red-600 p-4 rounded-lg text-sm font-medium border border-red-100"><?= $error ?></div>
@@ -92,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                         <div class="mt-6 text-center">
                             <p class="text-sm text-gray-500 mb-3">Tidak jadi menggunakan ruangan ini?</p>
                             <form method="POST" action="cancel.php">
+                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                 <input type="hidden" name="id" value="<?= $peminjaman['id'] ?>">
                                 <button type="submit" class="w-full bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-semibold py-2.5 rounded-lg transition-colors">
                                     Batalkan Peminjaman

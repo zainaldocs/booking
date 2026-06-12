@@ -6,14 +6,19 @@ if ($_SESSION['admin_role'] !== 'superadmin') {
     exit;
 }
 require_once '../config/database.php';
+require_once '../config/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        die("Token keamanan tidak valid. Silakan kembali dan muat ulang halaman.");
+    }
+
     if (isset($_POST['action']) && $_POST['action'] == 'add') {
         $stmt = $pdo->prepare("INSERT INTO jenis_fasilitas (nama_jenis) VALUES (?)");
         $stmt->execute([$_POST['nama']]);
     } elseif (isset($_POST['action']) && $_POST['action'] == 'delete') {
         $stmt = $pdo->prepare("DELETE FROM jenis_fasilitas WHERE id = ?");
-        $stmt->execute([$_POST['id']]);
+        $stmt->execute([(int) $_POST['id']]);
     }
     header("Location: jenis_fasilitas.php");
     exit;
@@ -40,6 +45,7 @@ $jenis = $pdo->query("SELECT * FROM jenis_fasilitas ORDER BY nama_jenis ASC")->f
                 <div class="md:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Tambah Jenis</h3>
                     <form method="POST" class="space-y-4">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                         <input type="hidden" name="action" value="add">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Jenis (misal: Proyektor)</label>
@@ -60,6 +66,7 @@ $jenis = $pdo->query("SELECT * FROM jenis_fasilitas ORDER BY nama_jenis ASC")->f
                                 <td class="px-6 py-4 font-semibold text-gray-800"><?= htmlspecialchars($j['nama_jenis']) ?></td>
                                 <td class="px-6 py-4 text-center">
                                     <form method="POST" onsubmit="return confirm('Hapus jenis ini akan menghapus semua unit fisiknya juga. Yakin?');">
+                                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="id" value="<?= $j['id'] ?>">
                                         <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded text-sm font-medium">Hapus</button>

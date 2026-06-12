@@ -3,14 +3,19 @@ session_start();
 if (!isset($_SESSION['admin_logged_in'])) exit(header("Location: login.php"));
 if ($_SESSION['admin_role'] !== 'superadmin') exit(header("Location: index.php"));
 require_once '../config/database.php';
+require_once '../config/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        die("Token keamanan tidak valid. Silakan kembali dan muat ulang halaman.");
+    }
+
     if (isset($_POST['action']) && $_POST['action'] == 'add') {
         $stmt = $pdo->prepare("INSERT INTO fasilitas (jenis_fasilitas_id, nomor_seri, status_kondisi) VALUES (?, ?, ?)");
         $stmt->execute([$_POST['jenis_id'], $_POST['nomor_seri'], $_POST['status_kondisi']]);
     } elseif (isset($_POST['action']) && $_POST['action'] == 'delete') {
         $stmt = $pdo->prepare("DELETE FROM fasilitas WHERE id = ?");
-        $stmt->execute([$_POST['id']]);
+        $stmt->execute([(int) $_POST['id']]);
     }
     header("Location: fasilitas.php");
     exit;
@@ -39,6 +44,7 @@ $fasilitas = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="md:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Tambah Unit Baru</h3>
                     <form method="POST" class="space-y-4">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                         <input type="hidden" name="action" value="add">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Pilih Jenis Fasilitas</label>
@@ -78,6 +84,7 @@ $fasilitas = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </td>
                                 <td class="px-6 py-4 text-center">
                                     <form method="POST" onsubmit="return confirm('Hapus unit fasilitas ini?');">
+                                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="id" value="<?= $f['id'] ?>">
                                         <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded text-sm font-medium">Hapus</button>

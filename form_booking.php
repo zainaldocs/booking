@@ -1,5 +1,7 @@
 <?php
+session_start();
 require_once 'config/database.php';
+require_once 'config/functions.php';
 
 // Fetch Ruangan
 $stmt_ruangan = $pdo->query("SELECT * FROM ruangan");
@@ -90,6 +92,7 @@ if (isset($_GET['msg'])) {
             <!-- Form Card -->
             <div class="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
                 <form action="proses_peminjaman.php" method="POST" class="p-8 sm:p-12 flex flex-col gap-12">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                     
                     <!-- Section 1: Informasi Peminjam -->
                     <section>

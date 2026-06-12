@@ -144,6 +144,7 @@ if ($req['status'] == 'Approved' && !empty($req['petugas_id'])) {
 
             <?php if($req['status'] == 'Pending'): ?>
             <form action="proses_approval.php" method="POST" class="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                 <input type="hidden" name="peminjaman_id" value="<?= $id ?>">
                 
                 <h3 class="text-xl font-bold text-gray-800 mb-6">Alokasi Fasilitas</h3>
@@ -235,6 +236,7 @@ if ($req['status'] == 'Approved' && !empty($req['petugas_id'])) {
                         <?php endif; ?>
                         
                         <form action="proses_approval.php" method="POST" class="mt-6 border-t border-gray-100 pt-6">
+                            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                             <input type="hidden" name="peminjaman_id" value="<?= $id ?>">
                             <button type="submit" name="action" value="cancel" class="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded shadow transition-colors w-full" onclick="return confirm('Batalkan booking ini secara manual? Status akan berubah jadi Canceled.');">Batalkan Booking Secara Manual</button>
                         </form>

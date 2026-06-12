@@ -1,7 +1,14 @@
 <?php
+session_start();
 require_once 'config/database.php';
 require_once 'config/mailer.php';
 require_once 'config/functions.php';
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        die("Token keamanan tidak valid. Silakan muat ulang halaman.");
+    }
+}
 
 $booking = null;
 $msg = '';
@@ -90,6 +97,7 @@ if ($booking && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_ca
                 </div>
 
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                     <input type="hidden" name="id" value="<?= $booking['id'] ?>">
                     <input type="hidden" name="confirm_cancel" value="1">
                     <div class="flex space-x-3">

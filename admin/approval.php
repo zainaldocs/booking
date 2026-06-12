@@ -5,6 +5,7 @@ if (!isset($_SESSION['admin_logged_in'])) {
     exit;
 }
 require_once '../config/database.php';
+require_once '../config/functions.php';
 
 // Filter Logic
 $where_clauses = [];
@@ -38,12 +39,24 @@ if (count($where_clauses) > 0) {
     $where_sql = "WHERE " . implode(" AND ", $where_clauses);
 }
 
+$count_query = "SELECT COUNT(p.id) FROM peminjaman p JOIN ruangan r ON p.ruangan_id = r.id LEFT JOIN departemen d ON p.departemen_id = d.id $where_sql";
+$stmt_count = $pdo->prepare($count_query);
+$stmt_count->execute($params);
+$total_records = $stmt_count->fetchColumn();
+
+$limit = 10;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) && $_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+$total_pages = ceil($total_records / $limit);
+if ($page > $total_pages && $total_pages > 0) $page = $total_pages;
+$offset = ($page - 1) * $limit;
+
 $query = "SELECT p.*, r.nama_ruangan, ua.username as nama_petugas 
           FROM peminjaman p 
           JOIN ruangan r ON p.ruangan_id = r.id 
           LEFT JOIN users_admin ua ON p.petugas_id = ua.id
           $where_sql 
-          ORDER BY CASE p.status WHEN 'Pending' THEN 1 WHEN 'Approved' THEN 2 ELSE 3 END, p.created_at DESC";
+          ORDER BY CASE p.status WHEN 'Pending' THEN 1 WHEN 'Approved' THEN 2 ELSE 3 END, p.created_at DESC 
+          LIMIT $limit OFFSET $offset";
 
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
@@ -169,10 +182,18 @@ $export_qs = http_build_query($query_string);
                                     <td class="px-6 py-4 text-center">
                                         <?= getStatusBadge($r['status']) ?>
                                     </td>
-                                    <td class="px-6 py-4 text-center">
+                                    <td class="px-6 py-4 text-center flex justify-center items-center space-x-2">
                                         <a href="approval_detail.php?id=<?= $r['id'] ?>" class="text-brand-600 hover:text-brand-800 font-medium bg-brand-50 px-3 py-1 rounded-md text-sm border border-brand-100">
                                             <?= $r['status'] == 'Pending' ? 'Proses' : 'Detail' ?>
                                         </a>
+                                        <?php if(in_array($r['status'], ['Pending', 'Approved'])): ?>
+                                        <form action="proses_approval.php" method="POST" class="inline" onsubmit="return confirm('Batalkan booking ini secara manual? Status akan berubah jadi Canceled.');">
+                                            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                            <input type="hidden" name="peminjaman_id" value="<?= $r['id'] ?>">
+                                            <input type="hidden" name="action" value="cancel">
+                                            <button type="submit" class="text-gray-600 hover:text-red-700 font-medium bg-gray-100 px-3 py-1 rounded-md text-sm border border-gray-200">Cancel</button>
+                                        </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -180,6 +201,55 @@ $export_qs = http_build_query($query_string);
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Pagination -->
+                <?php if ($total_pages > 1): ?>
+                <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                    <div class="text-sm text-gray-500">
+                        Menampilkan <?= $offset + 1 ?> sampai <?= min($offset + $limit, $total_records) ?> dari <?= $total_records ?> data
+                    </div>
+                    <div class="flex space-x-1">
+                        <?php 
+                        $qs = $_GET; 
+                        unset($qs['msg']);
+                        
+                        // Prev Button
+                        if($page > 1) {
+                            $qs['page'] = $page - 1;
+                            echo '<a href="approval.php?'.http_build_query($qs).'" class="px-3 py-1 rounded bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">Prev</a>';
+                        }
+                        
+                        // Page Numbers
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+                        
+                        if($start_page > 1) {
+                            $qs['page'] = 1;
+                            echo '<a href="approval.php?'.http_build_query($qs).'" class="px-3 py-1 rounded bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">1</a>';
+                            if($start_page > 2) echo '<span class="px-2 py-1 text-gray-400">...</span>';
+                        }
+                        
+                        for ($i = $start_page; $i <= $end_page; $i++) {
+                            $qs['page'] = $i;
+                            $activeClass = $i == $page ? 'bg-brand-600 text-white border-brand-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50';
+                            echo '<a href="approval.php?'.http_build_query($qs).'" class="px-3 py-1 rounded border '.$activeClass.' text-sm font-medium">'.$i.'</a>';
+                        }
+                        
+                        if($end_page < $total_pages) {
+                            if($end_page < $total_pages - 1) echo '<span class="px-2 py-1 text-gray-400">...</span>';
+                            $qs['page'] = $total_pages;
+                            echo '<a href="approval.php?'.http_build_query($qs).'" class="px-3 py-1 rounded bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">'.$total_pages.'</a>';
+                        }
+                        
+                        // Next Button
+                        if($page < $total_pages) {
+                            $qs['page'] = $page + 1;
+                            echo '<a href="approval.php?'.http_build_query($qs).'" class="px-3 py-1 rounded bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">Next</a>';
+                        }
+                        ?>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </main>

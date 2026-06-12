@@ -3,8 +3,13 @@ session_start();
 if (!isset($_SESSION['admin_logged_in'])) exit(header("Location: login.php"));
 if ($_SESSION['admin_role'] !== 'superadmin') exit(header("Location: index.php"));
 require_once '../config/database.php';
+require_once '../config/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        die("Token keamanan tidak valid. Silakan kembali dan muat ulang halaman.");
+    }
+    
     if (isset($_POST['action']) && $_POST['action'] == 'add') {
         $username = $_POST['username'];
         $email = $_POST['email'];
@@ -15,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->execute([$username, $email, $password, $role]);
         
     } elseif (isset($_POST['action']) && $_POST['action'] == 'edit') {
-        $id = $_POST['id'];
+        $id = (int) $_POST['id'];
         $username = $_POST['username'];
         $email = $_POST['email'];
         $role = $_POST['role'] ?? 'admin';
@@ -34,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $count = $pdo->query("SELECT COUNT(*) FROM users_admin")->fetchColumn();
         if ($count > 1) {
             $stmt = $pdo->prepare("DELETE FROM users_admin WHERE id = ?");
-            $stmt->execute([$_POST['id']]);
+            $stmt->execute([(int) $_POST['id']]);
         }
     }
     header("Location: users.php");
@@ -75,6 +80,7 @@ if (isset($_GET['edit'])) {
                         <?= $edit_admin ? 'Edit Data Admin' : 'Tambah Admin Baru' ?>
                     </h3>
                     <form method="POST" class="space-y-4">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                         <input type="hidden" name="action" value="<?= $edit_admin ? 'edit' : 'add' ?>">
                         <?php if($edit_admin): ?>
                             <input type="hidden" name="id" value="<?= $edit_admin['id'] ?>">
@@ -141,6 +147,7 @@ if (isset($_GET['edit'])) {
                                         
                                         <?php if(count($admins) > 1): ?>
                                         <form method="POST" class="inline" onsubmit="return confirm('Yakin ingin menghapus akun admin ini?');">
+                                            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= $adm['id'] ?>">
                                             <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-semibold ml-3">Hapus</button>

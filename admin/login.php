@@ -1,23 +1,29 @@
 <?php
 session_start();
 require_once '../config/database.php';
+require_once '../config/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
-
-    $stmt = $pdo->prepare("SELECT * FROM users_admin WHERE username = ?");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['admin_logged_in'] = true;
-        $_SESSION['admin_id'] = $user['id'];
-        $_SESSION['admin_role'] = $user['role'] ?? 'admin';
-        header("Location: index.php");
-        exit;
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = "Token keamanan tidak valid. Silakan muat ulang halaman.";
     } else {
-        $error = "Username atau password salah.";
+        $username = $_POST['username'];
+        $password = $_POST['password'];
+
+        $stmt = $pdo->prepare("SELECT * FROM users_admin WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($user && password_verify($password, $user['password'])) {
+            session_regenerate_id(true);
+            $_SESSION['admin_logged_in'] = true;
+            $_SESSION['admin_id'] = $user['id'];
+            $_SESSION['admin_role'] = $user['role'] ?? 'admin';
+            header("Location: index.php");
+            exit;
+        } else {
+            $error = "Username atau password salah.";
+        }
     }
 }
 ?>
@@ -43,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm font-medium text-center border border-red-100"><?= $error ?></div>
         <?php endif; ?>
         <form method="POST" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
                 <input type="text" name="username" required class="form-input rounded-lg bg-gray-50 border-gray-200">
