@@ -58,6 +58,10 @@ Sepanjang proses pengembangan hingga mencapai versi stabil 1.0.0, aplikasi ini t
    - *Request*: Menukar letak tombol aksi utama di sidebar `index.php` sehingga tombol '+ Form Peminjaman' diletakkan mencolok di atas, dan tautan 'Login Panel Admin' menjadi elegan di bawah.
 6. **Multi-Admin & Penugasan Petugas**:
    - *Request*: Menambahkan fitur "Manajemen Admin" dengan kapabilitas CRUD utuh (termasuk Edit Profil dan Enkripsi Password). Kemudian, mengintegrasikan data admin ini ke dalam alur *Approval*, sehingga penyetuju dapat menunjuk siapa Petugas (*Assignee*) yang secara riil menyiapkan ruangan untuk peminjaman tersebut.
+7. **Peningkatan Keamanan (Security Hardening)**:
+   - *Request*: Melakukan audit keamanan secara menyeluruh dan mengimplementasikan perbaikan perlindungan. Pemindahan kredensial *database* ke `.env`, penambahan proteksi **CSRF** pada semua formulir, mitigasi *Session Fixation* pada *login*, serta *typecasting* ketat pada parameter ID untuk meminimalisasi risiko serangan *SQL Injection*.
+8. **Penyempurnaan Fitur Admin & Alur Email (Bugfixes & UX)**:
+   - *Request*: Penambahan fitur pembagian halaman (*Pagination*) pada daftar Approval Admin, perbaikan *bug* *link cancel* pada email notifikasi agar secara otomatis mendeteksi direktori *root*, penambahan tombol *Cancel* praktis di tabel antrean Approval, serta dukungan kata kunci dinamis `[petugas]` pada format email disetujui.
 
 ---
-*Dokumentasi ini di-generate pada peresmian Versi 1.0.0 Sistem Booking.*
+*Dokumentasi ini di-generate pada peresmian Versi 1.1.0 Sistem Booking (Security Patch).*
